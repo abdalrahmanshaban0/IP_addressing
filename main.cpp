@@ -39,6 +39,17 @@ int getValidIP(int* IP, char* chk, int& prf){
     return 1;
 }
 
+void PrintIP(vector<vector<int>>& v){
+    for(int j = 0; j < v.size(); j++){
+        for(int k = 0; k < 4; k++){
+            cout << v[j][k];
+            if(k < 3) cout << '.';
+        } 
+        cout << '/' << v[j][4] << '\n';
+    }
+    cout << '\n';
+}
+
 vector<vector<int>> TraditionalAddr(int* IP, int& prf, int& subnets, int& subnetPortion){
     vector<vector<int>> ret(subnets, vector<int>(5));
     for(auto& i : ret){
@@ -77,23 +88,22 @@ vector<vector<int>> TraditionalAddr(int* IP, int& prf, int& subnets, int& subnet
     return ret;
 }
 
-void VLSM(int* IP, vector<pair<int, int>>& h, int& n, vector<vector<vector<int>>>& v, int idx, int prf){
-    if(idx == n){
-        return;
+void VLSM(int* IP, int* h, int* frq, int& n, vector<vector<vector<int>>>& v, int prf){
+    for(int i = 32; i >= 0; i--){
+        int p = frq[i];
+        if(!p) continue;
+        int en = p;
+        int mx = 32-prf;
+        int step = max(mx - en, 1);
+        int subnets = (1<<step);
+        int subnetPortion = step;
+        vector<vector<int>> ret = TraditionalAddr(IP, prf, subnets, subnetPortion);
+        prf += subnetPortion;
+        for(int j = 0; j < 4; j++){
+            IP[j] = ret[1][j];
+        }
+        v[p] = ret; 
     }
-    int en = log2(h[idx].first)+1;
-    int mx = 32-prf;
-    int step = max(mx - en, 1);
-
-    int subnets = (1<<step);
-    int subnetPortion = step;
-    vector<vector<int>> ret = TraditionalAddr(IP, prf, subnets, subnetPortion);
-    prf += subnetPortion;
-    for(int i = 0; i < 4; i++){
-        IP[i] = ret[1][i];
-    }
-    v[idx] = ret;
-    VLSM(IP, h, n, v, idx+1, prf);
 }
 
 int main(){
@@ -120,57 +130,38 @@ int main(){
         cin >> subnets;
 
         while(mxsubnets < subnets || !isPowerofTwo(subnets)){
-            cout << "Number must be power of 2 and less or equal than " << mxsubnets << '\n';
+            cout << "Number must be power of 2 and less or equal than " << mxsubnets << "take:" << '\n';
             cin >> subnets;
         }
 
         int subnetPortion = log2(subnets);
         vector<vector<int>> res = TraditionalAddr(IP, prf, subnets, subnetPortion);
-        for(int i = 0; i < subnets; i++){
-            for(int j = 0; j < 4; j++){
-                cout << res[i][j];
-                if(j < 3) cout << '.';
-            }
-            cout << '/' << res[i][4] << '\n'; 
-        }
+        PrintIP(res);
     }
     else{
         int n;
         cout << "Enter number of networks\n";
         cin >> n;
-        map<int, int> mp;
         cout << "Enter number of Hosts in each network\n";
-        for(int i = 0 ;i < n; i++){
-            int x; cin >> x;
-            mp[x]++;
-        }
-        n = mp.size();
-        vector<pair<int, int>> h(n);
-        int it = 0;
-        for(auto& i : mp){
-            h[n-it-1].first = i.first;
-            h[n-it-1].second = i.second;
-            it++;
-        }
-        vector<vector<vector<int>>> v(n);
-        VLSM(IP, h, n, v, 0, prf);
 
+        int h[n];
+        int frq[35] = {0};        
         for(int i = 0 ;i < n; i++){
-            cout << "For " << h[i].first << " hosts: \n";
-            for(int j = 0; j < v[i].size(); j++){
-                for(int k = 0; k < 4; k++){
-                    cout << v[i][j][k];
-                    if(k < 3) cout << '.';
-                } 
-                cout << '/' << v[i][j][4] << '\n';
-            }
-            cout << '\n';
+            cin >> h[i];
+            int temp = log2(h[i])+1;
+            frq[temp] = temp;
         }
+        sort(h, h+n);
+        reverse(h, h+n);
 
+        vector<vector<vector<int>>> v(35);
+        VLSM(IP, h, frq, n, v, prf);
+
+        for(int i = 32 ;i >= 0; i--){
+            int p = frq[i];
+            if(!p) continue;
+            cout << "For hosts from " << (1<<(p-1))-2 << " to " << (1<<p)-2 << " take:\n";
+            PrintIP(v[p]);
+        }
     }
-
-
-
-
-
 }
